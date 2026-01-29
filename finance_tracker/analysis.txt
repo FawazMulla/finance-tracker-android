@@ -1,0 +1,26 @@
+Analyzing finance_tracker...                                    
+
+  error - The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  - lib\main.dart:30:22 - argument_type_not_assignable
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\main.dart:41:13 - deprecated_member_use
+  error - The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  - lib\main.dart:46:25 - argument_type_not_assignable
+   info - Don't invoke 'print' in production code - lib\providers\transaction_provider.dart:38:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\providers\transaction_provider.dart:60:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\providers\transaction_provider.dart:86:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\providers\transaction_provider.dart:106:7 - avoid_print
+   info - Unnecessary use of multiple underscores - lib\screens\history_screen.dart:52:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\history_screen.dart:52:88 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\history_screen.dart:54:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\history_screen.dart:54:88 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_screen.dart:46:93 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\home_screen.dart:186:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\home_screen.dart:186:88 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\home_screen.dart:188:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\home_screen.dart:188:88 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\stats_screen.dart:121:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\stats_screen.dart:121:88 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\stats_screen.dart:123:85 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\stats_screen.dart:123:88 - unnecessary_underscores
+   info - Don't invoke 'print' in production code - lib\services\api_service.dart:34:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:25:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\transaction_item.dart:27:26 - deprecated_member_use
+
