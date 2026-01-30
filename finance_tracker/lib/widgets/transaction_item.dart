@@ -15,33 +15,49 @@ class TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.amount > 0;
-    final color = isIncome ? Colors.green : Colors.red;
+    final primaryColor = isIncome ? const Color(0xFF10b981) : const Color(0xFFef4444);
+    final bgColor = isIncome ? const Color(0xFF064e3b) : const Color(0xFF7f1d1d);
     final dateStr = DateFormat('MMM d, y').format(transaction.date);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF334155).withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+            color: bgColor.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            isIncome ? Icons.arrow_upward : Icons.arrow_downward,
-            color: color,
+          alignment: Alignment.center,
+          child: Text(
+            isIncome ? '↗️' : '↙️',
+            style: const TextStyle(fontSize: 18),
           ),
         ),
         title: Text(
           transaction.note.isNotEmpty ? transaction.note : 'No description',
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 15,
+          ),
         ),
-        subtitle: Text(dateStr),
+        subtitle: Text(
+          dateStr,
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+        ),
         trailing: Text(
           '${isIncome ? '+' : ''}₹${transaction.amount.abs().toStringAsFixed(0)}',
           style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
+            color: primaryColor,
+            fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
         ),

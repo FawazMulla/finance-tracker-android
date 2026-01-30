@@ -19,18 +19,20 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Finance Tracker',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366f1),
             brightness: Brightness.light,
+            primary: const Color(0xFF6366f1),
           ),
           textTheme: GoogleFonts.interTextTheme(),
-          scaffoldBackgroundColor: const Color(0xFFf3f4f6),
-             cardTheme: CardThemeData(
-            elevation: 0, 
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: Colors.white,
+          scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+          cardTheme: const CardThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+            color: Color(0xFFf8fafc),
           ),
         ),
         darkTheme: ThemeData(
@@ -38,19 +40,32 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366f1),
             brightness: Brightness.dark,
-            surface: const Color(0xFF0f172a), 
+            primary: const Color(0xFF6366f1),
+            surface: const Color(0xFF1e293b),
+            onSurface: Colors.white,
           ),
-          textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+          textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
+            bodyLarge: const TextStyle(color: Color(0xFFf8fafc)),
+            bodyMedium: const TextStyle(color: Color(0xFFcbd5e1)),
+          ),
           scaffoldBackgroundColor: const Color(0xFF0f172a),
-             cardTheme: CardThemeData( // Reverting to CardTheme if CardThemeData is not found, but error says CardThemeData. 
-             // Actually, the error said "The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'".
-             // This means I MUST use CardThemeData.
-            elevation: 0, 
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: const Color(0xFF1e293b),
+          cardTheme: const CardThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+            color: Color(0xFF1e293b),
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF0f172a),
+            elevation: 0,
+            centerTitle: false,
+            titleTextStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
-        themeMode: ThemeMode.system, // or User preference
+        themeMode: ThemeMode.dark,
         home: const HomeScreen(),
       ),
     );

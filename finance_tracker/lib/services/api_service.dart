@@ -20,8 +20,6 @@ class ApiService {
         ...payload,
       };
 
-      print('API Request: $action');
-      print('Payload: $body');
 
       // POST request with form data
       final request = http.Request('POST', uri)
@@ -31,16 +29,14 @@ class ApiService {
       final streamedResponse = await client.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
-      print('Status: ${response.statusCode}');
+
       
       // Handle 302 redirect from Google Apps Script
       if (response.statusCode == 302 || response.statusCode == 301) {
         final redirectUrl = response.headers['location'];
         if (redirectUrl != null) {
-          print('Following redirect to: $redirectUrl');
           final redirectResponse = await client.get(Uri.parse(redirectUrl));
-          print('Redirect status: ${redirectResponse.statusCode}');
-          print('Response length: ${redirectResponse.body.length}');
+
           
           if (redirectResponse.statusCode >= 400) {
             throw Exception('HTTP ${redirectResponse.statusCode}: ${redirectResponse.reasonPhrase}');
@@ -57,13 +53,13 @@ class ApiService {
         }
       }
 
-      print('Response length: ${response.body.length}');
+
       
       // Only print first 200 chars to avoid flooding console
       if (response.body.length > 200) {
-        print('Response preview: ${response.body.substring(0, 200)}...');
+
       } else {
-        print('Response: ${response.body}');
+
       }
 
       if (response.statusCode >= 400) {
@@ -89,7 +85,7 @@ class ApiService {
 
       return data;
     } catch (e) {
-      print('API Error ($action): $e');
+
       rethrow;
     } finally {
       client.close();

@@ -22,7 +22,7 @@ class StorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((json) => TransactionModel.fromJson(json)).toList();
     } catch (e) {
-      print('Error parsing cached transactions: $e');
+
       return [];
     }
   }

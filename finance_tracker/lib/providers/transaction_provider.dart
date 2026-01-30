@@ -35,7 +35,6 @@ class TransactionProvider with ChangeNotifier {
       await fetchTransactions();
     } catch (e) {
       // If API fails, we rely on cache and show error locally
-      print('Initial load error: $e');
     } finally {
       if (_transactions.isEmpty) {
         _isLoading = false;
@@ -57,7 +56,7 @@ class TransactionProvider with ChangeNotifier {
       await _storageService.saveTransactions(_transactions);
     } catch (e) {
       _error = e.toString();
-      print('Fetch error: $e');
+
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -83,7 +82,7 @@ class TransactionProvider with ChangeNotifier {
       _error = 'Failed to sync add: $e';
       // Rollback or queue for later (Queue not implemented yet in minimal plan)
       // For now, keep local change but warn
-      print('Add error: $e');
+
     }
   }
 
@@ -103,7 +102,6 @@ class TransactionProvider with ChangeNotifier {
       // Rollback
       _transactions.insert(index, removedTx);
       notifyListeners();
-      print('Delete error: $e');
     }
   }
 }
