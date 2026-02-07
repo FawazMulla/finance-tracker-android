@@ -140,6 +140,116 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // Bar Chart - Daily Spending
+                Card(
+                  color: const Color(0xFF1e293b),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Daily Spending",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          height: 200,
+                          child: DailySpendingBarChart(
+                            transactions: provider.transactions,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Transaction Count Card
+                Card(
+                  color: const Color(0xFF1e293b),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Transaction Summary",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _SummaryItem(
+                              label: 'Total',
+                              value: provider.transactions.length.toString(),
+                              color: const Color(0xFF6366f1),
+                            ),
+                            _SummaryItem(
+                              label: 'Income',
+                              value: provider.transactions
+                                  .where((t) => t.amount > 0)
+                                  .length
+                                  .toString(),
+                              color: const Color(0xFF10b981),
+                            ),
+                            _SummaryItem(
+                              label: 'Expense',
+                              value: provider.transactions
+                                  .where((t) => t.amount < 0)
+                                  .length
+                                  .toString(),
+                              color: const Color(0xFFef4444),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Average Transaction Card
+                Card(
+                  color: const Color(0xFF1e293b),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Averages",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _SummaryItem(
+                              label: 'Avg Income',
+                              value: '₹${_calculateAverage(provider.transactions.where((t) => t.amount > 0).toList())}',
+                              color: const Color(0xFF10b981),
+                            ),
+                            _SummaryItem(
+                              label: 'Avg Expense',
+                              value: '₹${_calculateAverage(provider.transactions.where((t) => t.amount < 0).toList())}',
+                              color: const Color(0xFFef4444),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 100),
               ],
             );
@@ -162,6 +272,12 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
         ],
       ),
     );
+  }
+
+  String _calculateAverage(List<TransactionModel> transactions) {
+    if (transactions.isEmpty) return '0';
+    final sum = transactions.fold(0.0, (sum, t) => sum + t.amount.abs());
+    return (sum / transactions.length).toStringAsFixed(0);
   }
 }
 
@@ -314,13 +430,133 @@ class AnimatedBalanceChart extends StatelessWidget {
                 dotData: const FlDotData(show: true),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+
+/// Summary Item Widget
+class _SummaryItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _SummaryItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Daily Spending Bar Chart
+class DailySpendingBarChart extends StatelessWidget {
+  final List<TransactionModel> transactions;
+
+  const DailySpendingBarChart({required this.transactions, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (transactions.isEmpty) return const Center(child: Text('No data'));
+
+    // Get last 7 days of expenses
+    final now = DateTime.now();
+    final last7Days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+    
+    final Map<String, double> dailyExpenses = {};
+    for (var day in last7Days) {
+      final key = DateFormat('yyyy-MM-dd').format(day);
+      dailyExpenses[key] = 0.0;
+    }
+
+    for (var tx in transactions.where((t) => t.amount < 0)) {
+      final key = DateFormat('yyyy-MM-dd').format(tx.date);
+      if (dailyExpenses.containsKey(key)) {
+        dailyExpenses[key] = dailyExpenses[key]! + tx.amount.abs();
+      }
+    }
+
+    final dates = dailyExpenses.keys.toList()..sort();
+    final maxValue = dailyExpenses.values.reduce((a, b) => a > b ? a : b);
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxValue * 1.2,
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= dates.length) return const SizedBox();
+                final date = DateTime.parse(dates[index]);
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    DateFormat('E').format(date),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(
+          dates.length,
+          (index) => BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: dailyExpenses[dates[index]]!,
+                color: const Color(0xFFef4444),
+                width: 20,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

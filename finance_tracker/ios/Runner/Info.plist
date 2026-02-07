@@ -45,5 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.example.finance_tracker</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>financetracker</string>
+			</array>
+		</dict>
+	</array>
+	<key>AppGroupId</key>
+	<string>group.com.example.finance_tracker</string>
 </dict>
 </plist>

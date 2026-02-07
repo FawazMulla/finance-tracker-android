@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:home_widget/home_widget.dart';
 import '../models/transaction.dart';
 import '../providers/transaction_provider.dart';
 import '../widgets/transaction_item.dart';
 import '../widgets/add_transaction_modal.dart';
+import '../widgets/quick_add_transaction_modal.dart';
+import '../services/widget_service.dart';
+import '../utils/shake_detector.dart';
 import 'history_screen.dart';
 import 'stats_screen.dart';
 
@@ -19,6 +24,8 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _controller;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  ShakeDetector? _shakeDetector;
+  final WidgetService _widgetService = WidgetService();
 
   @override
   void initState() {
@@ -47,12 +54,78 @@ class _HomeScreenState extends State<HomeScreen>
     /// 🔥 CRITICAL FIX: start animation after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.forward();
+      _initializeShakeDetector();
+      _listenToWidgetClicks();
+      _updateHomeWidget();
     });
+  }
+
+  void _initializeShakeDetector() {
+    _shakeDetector = ShakeDetector.autoStart(
+      onPhoneShake: () {
+        if (mounted) {
+          if (kDebugMode) {
+            print('Shake detected! Opening modal...');
+          }
+          _openAddTransactionModal();
+        }
+      },
+      minimumShakeCount: 2,
+      shakeSlopTimeMS: 500,
+      shakeCountResetTime: 3000,
+      shakeThresholdGravity: 2.7,
+    );
+  }
+
+  void _listenToWidgetClicks() {
+    HomeWidget.widgetClicked.listen((uri) {
+      if (uri != null) {
+        if (uri.host == 'addtransaction') {
+          _openAddTransactionModal();
+        } else if (uri.host == 'quickadd') {
+          final type = uri.queryParameters['type'];
+          _openQuickAddModal(type);
+        }
+      }
+    });
+  }
+
+  void _openAddTransactionModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddTransactionModal(),
+    ).then((_) => _updateHomeWidget());
+  }
+
+  void _openQuickAddModal(String? type) {
+    if (type == null) {
+      _openAddTransactionModal();
+      return;
+    }
+    
+    final isIncome = type == 'income';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickAddTransactionModal(isIncome: isIncome),
+    ).then((_) => _updateHomeWidget());
+  }
+
+  Future<void> _updateHomeWidget() async {
+    final provider = Provider.of<TransactionProvider>(context, listen: false);
+    await _widgetService.updateWidget(
+      balance: provider.currentBalance,
+      transactionCount: provider.transactions.length,
+    );
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _shakeDetector?.stopListening();
     super.dispose();
   }
 
@@ -111,6 +184,43 @@ class _HomeScreenState extends State<HomeScreen>
                       const EdgeInsets.only(left: 16, bottom: 16),
                     ),
                     actions: [
+                      // Sync status indicator
+                      if (provider.syncStatus != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (provider.isSyncing)
+                                    const SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                  if (provider.isSyncing) const SizedBox(width: 8),
+                                  Text(
+                                    provider.syncStatus!,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       IconButton(
                         icon: const Icon(Icons.refresh, color: Colors.white),
                         onPressed: () => provider.fetchTransactions(),
@@ -204,15 +314,20 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             icon: const Icon(Icons.add),
                             label: const Text('New Transaction'),
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (_) =>
-                                const AddTransactionModal(),
-                              );
-                            },
+                            onPressed: _openAddTransactionModal,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          /// SHAKE HINT
+                          Center(
+                            child: Text(
+                              '📱 Shake your phone to add transaction',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
 
                           const SizedBox(height: 32),
