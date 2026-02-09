@@ -5,6 +5,7 @@ import 'providers/transaction_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/widget_service.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   

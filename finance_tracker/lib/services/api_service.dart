@@ -59,11 +59,12 @@ class ApiService {
             print('Redirect response status: ${redirectResponse.statusCode}');
           }
           
+          
           if (redirectResponse.statusCode >= 400) {
             throw Exception('HTTP ${redirectResponse.statusCode}: ${redirectResponse.reasonPhrase}');
           }
           
-          final data = jsonDecode(redirectResponse.body);
+          final data = await compute(_parseJson, redirectResponse.body);
           
           // Check for error in response
           if (data is Map && data.containsKey('error')) {
@@ -97,7 +98,8 @@ class ApiService {
         );
       }
 
-      final data = jsonDecode(response.body);
+      final data = await compute(_parseJson, response.body);
+       
       
       // Check for error in response
       if (data is Map && data.containsKey('error')) {
@@ -168,5 +170,9 @@ class ApiService {
 
   Future<void> deleteTransaction(String id) async {
     await _post('delete', {'id': id});
+  }
+
+  static dynamic _parseJson(String body) {
+    return jsonDecode(body);
   }
 }

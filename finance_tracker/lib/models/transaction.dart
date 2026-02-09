@@ -4,11 +4,14 @@ class TransactionModel {
   final double amount;
   final String note;
 
+  final bool isSynced;
+
   TransactionModel({
     required this.id,
     required this.date,
     required this.amount,
     required this.note,
+    this.isSynced = true,
   });
 
   // Factory to create from JSON
@@ -18,6 +21,7 @@ class TransactionModel {
       date: DateTime.parse(json['date'] as String),
       amount: (json['amount'] as num).toDouble(),
       note: json['note'] as String? ?? '',
+      isSynced: json['isSynced'] as bool? ?? true,
     );
   }
 
@@ -28,6 +32,7 @@ class TransactionModel {
       'date': date.toIso8601String(),
       'amount': amount,
       'note': note,
+      'isSynced': isSynced,
     };
   }
 }

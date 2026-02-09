@@ -2,4 +2,7 @@
 <resources>
     <string name="app_name">Finance Tracker</string>
     <string name="widget_description">Quick access to add transactions and view balance</string>
+    <string name="add_expense_short">Add Expense</string>
+    <string name="add_expense_long">Add a new expense</string>
+    <string name="accessibility_service_description">Enables quick transaction entry by pressing both volume buttons simultaneously. This service only listens for volume key combinations and does not access any other content.</string>
 </resources>

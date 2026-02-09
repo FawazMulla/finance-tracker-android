@@ -19,8 +19,9 @@ class WidgetService : Service() {
         when (intent?.action) {
             ACTION_ADD_INCOME -> {
                 val amount = intent.getStringExtra(EXTRA_AMOUNT)
+                val note = intent.getStringExtra(EXTRA_NOTE) ?: "Income"
                 if (amount != null && amount.isNotEmpty()) {
-                    addTransaction(amount.toDoubleOrNull() ?: 0.0, true)
+                    addTransaction(amount.toDoubleOrNull() ?: 0.0, note.ifEmpty { "Income" }, true)
                     Toast.makeText(this, "Income added: ₹$amount", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Please enter amount", Toast.LENGTH_SHORT).show()
@@ -28,8 +29,9 @@ class WidgetService : Service() {
             }
             ACTION_ADD_EXPENSE -> {
                 val amount = intent.getStringExtra(EXTRA_AMOUNT)
+                val note = intent.getStringExtra(EXTRA_NOTE) ?: "Expense"
                 if (amount != null && amount.isNotEmpty()) {
-                    addTransaction(amount.toDoubleOrNull() ?: 0.0, false)
+                    addTransaction(amount.toDoubleOrNull() ?: 0.0, note.ifEmpty { "Expense" }, false)
                     Toast.makeText(this, "Expense added: ₹$amount", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this, "Please enter amount", Toast.LENGTH_SHORT).show()
@@ -45,7 +47,7 @@ class WidgetService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun addTransaction(amount: Double, isIncome: Boolean) {
+    private fun addTransaction(amount: Double, note: String, isIncome: Boolean) {
         if (amount <= 0) return
 
         val prefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
@@ -64,7 +66,7 @@ class WidgetService : Service() {
         }
 
         // Save transaction to local storage
-        saveTransactionToStorage(finalAmount, if (isIncome) "Income" else "Expense")
+        saveTransactionToStorage(finalAmount, note)
 
         // Update widget
         refreshWidget()
@@ -73,30 +75,40 @@ class WidgetService : Service() {
     private fun saveTransactionToStorage(amount: Double, note: String) {
         val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         
-        // Create transaction JSON
+        // Create transaction JSON matching Flutter's TransactionModel
         val transaction = JSONObject().apply {
             put("id", UUID.randomUUID().toString())
             put("amount", amount)
             put("note", note)
             put("date", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US).format(Date()))
+            put("isSynced", false)
         }
 
-        // Get existing transactions
-        val transactionsJson = prefs.getString("flutter.transactions", "[]") ?: "[]"
-        val transactionsList = try {
-            org.json.JSONArray(transactionsJson)
-        } catch (e: Exception) {
+        // Flutter uses "flutter." prefix for SharedPreferences keys
+        val transactionsJson = prefs.getString("flutter.transactions_cache", null)
+        val transactionsList = if (transactionsJson != null) {
+            try {
+                org.json.JSONArray(transactionsJson)
+            } catch (e: Exception) {
+                org.json.JSONArray()
+            }
+        } else {
             org.json.JSONArray()
         }
 
-        // Add new transaction
-        transactionsList.put(transaction)
-
-        // Save back
-        prefs.edit().apply {
-            putString("flutter.transactions", transactionsList.toString())
-            apply()
+        // Add new transaction at the beginning (most recent first)
+        val newList = org.json.JSONArray()
+        newList.put(transaction)
+        for (i in 0 until transactionsList.length()) {
+            newList.put(transactionsList.get(i))
         }
+
+        // Save back with flutter. prefix - use commit() for immediate visibility in Flutter
+        val success = prefs.edit().putString("flutter.transactions_cache", newList.toString()).commit()
+        
+        android.util.Log.d("WidgetService", "SUCCESS: $success")
+        android.util.Log.d("WidgetService", "SAVED JSON: ${transaction.toString()}")
+        android.util.Log.d("WidgetService", "TOTAL CACHE SIZE: ${newList.length()}")
     }
 
     private fun refreshWidget() {
@@ -114,5 +126,6 @@ class WidgetService : Service() {
         const val ACTION_ADD_EXPENSE = "com.example.finance_tracker.ADD_EXPENSE"
         const val ACTION_REFRESH = "com.example.finance_tracker.REFRESH"
         const val EXTRA_AMOUNT = "amount"
+        const val EXTRA_NOTE = "note"
     }
 }

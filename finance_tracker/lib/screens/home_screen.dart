@@ -8,7 +8,7 @@ import '../widgets/transaction_item.dart';
 import '../widgets/add_transaction_modal.dart';
 import '../widgets/quick_add_transaction_modal.dart';
 import '../services/widget_service.dart';
-import '../utils/shake_detector.dart';
+
 import 'history_screen.dart';
 import 'stats_screen.dart';
 
@@ -20,20 +20,20 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
-  ShakeDetector? _shakeDetector;
   final WidgetService _widgetService = WidgetService();
 
   @override
   void initState() {
     super.initState();
 
+    // Reduced animation duration for better performance
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 400),
     );
 
     _fade = CurvedAnimation(
@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.12),
+      begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -51,31 +51,31 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    /// 🔥 CRITICAL FIX: start animation after first frame
+    // Defer heavy operations to after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _controller.forward();
-      _initializeShakeDetector();
       _listenToWidgetClicks();
-      _updateHomeWidget();
+      // Defer widget update to avoid blocking UI
+      Future.microtask(() => _updateHomeWidget());
     });
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  void _initializeShakeDetector() {
-    _shakeDetector = ShakeDetector.autoStart(
-      onPhoneShake: () {
-        if (mounted) {
-          if (kDebugMode) {
-            print('Shake detected! Opening modal...');
-          }
-          _openAddTransactionModal();
-        }
-      },
-      minimumShakeCount: 2,
-      shakeSlopTimeMS: 500,
-      shakeCountResetTime: 3000,
-      shakeThresholdGravity: 2.7,
-    );
+
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reload from storage first (to get widget/volume gesture transactions)
+      // then sync with API
+      if (kDebugMode) {
+        print('[HomeScreen] App resumed - reloading transactions');
+      }
+      Provider.of<TransactionProvider>(context, listen: false).loadInitialData();
+    }
   }
+
+
 
   void _listenToWidgetClicks() {
     HomeWidget.widgetClicked.listen((uri) {
@@ -124,8 +124,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
-    _shakeDetector?.stopListening();
     super.dispose();
   }
 
@@ -321,13 +321,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                           /// SHAKE HINT
                           Center(
-                            child: Text(
-                              '📱 Shake your phone to add transaction',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontSize: 12,
-                              ),
-                            ),
+
                           ),
 
                           const SizedBox(height: 32),
@@ -381,22 +375,8 @@ class _HomeScreenState extends State<HomeScreen>
                       delegate: SliverChildBuilderDelegate(
                             (context, index) {
                           final tx = provider.transactions[index];
-
-                          return TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0, end: 1),
-                            duration:
-                            Duration(milliseconds: 300 + index * 80),
-                            builder: (context, value, child) {
-                              return Opacity(
-                                opacity: value,
-                                child: Transform.translate(
-                                  offset: Offset(0, 20 * (1 - value)),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: _dismissible(context, tx, provider),
-                          );
+                          // Simplified animation - no staggered delays
+                          return _dismissible(context, tx, provider);
                         },
                         childCount:
                         provider.transactions.take(5).length,
@@ -504,51 +484,19 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 }
-class LoadingListAnimator extends StatefulWidget {
+class LoadingListAnimator extends StatelessWidget {
   const LoadingListAnimator({super.key});
-
-  @override
-  State<LoadingListAnimator> createState() => _LoadingListAnimatorState();
-}
-
-class _LoadingListAnimatorState extends State<LoadingListAnimator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: List.generate(4, (index) {
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Opacity(
-              opacity: 0.5 + (_controller.value * 0.5),
-              child: child,
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            height: 70,
-            decoration: BoxDecoration(
-              color: const Color(0xFF334155),
-              borderRadius: BorderRadius.circular(14),
-            ),
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          height: 70,
+          decoration: BoxDecoration(
+            color: const Color(0xFF334155).withOpacity(0.6),
+            borderRadius: BorderRadius.circular(14),
           ),
         );
       }),

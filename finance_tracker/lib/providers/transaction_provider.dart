@@ -25,7 +25,7 @@ class TransactionProvider with ChangeNotifier {
   double get currentBalance => _transactions.fold(0, (sum, item) => sum + item.amount);
 
   TransactionProvider() {
-    _loadInitialData();
+    loadInitialData();
   }
 
   Future<void> _updateWidget() async {
@@ -35,24 +35,42 @@ class TransactionProvider with ChangeNotifier {
     );
   }
 
-  Future<void> _loadInitialData() async {
+  Future<void> loadInitialData() async {
     _isLoading = true;
     notifyListeners();
 
     try {
       // Load cache first for speed
       _transactions = await _storageService.loadTransactions();
+      _isLoading = false;
       notifyListeners();
 
-      // Then fetch from API
-      await fetchTransactions();
+      // Defer sync operations to avoid blocking UI
+      Future.delayed(const Duration(milliseconds: 500), () async {
+        // Check for unsynced transactions (from widget)
+        final unsynced = _transactions.where((tx) => !tx.isSynced).toList();
+        if (unsynced.isNotEmpty) {
+          _syncStatus = 'Syncing widget transactions...';
+          notifyListeners();
+          
+          // Sync one at a time to reduce load
+          for (final tx in unsynced) {
+            try {
+              await _apiService.addTransaction(tx);
+            } catch (e) {
+              if (kDebugMode) print('Failed to sync widget tx ${tx.id}: $e');
+            }
+          }
+        }
+
+        // Then fetch from API
+        await fetchTransactions();
+      });
     } catch (e) {
       // If API fails, we rely on cache and show error locally
-    } finally {
-      if (_transactions.isEmpty) {
-        _isLoading = false;
-        notifyListeners();
-      }
+      if (kDebugMode) print('Error loading initial data: $e');
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -63,14 +81,31 @@ class TransactionProvider with ChangeNotifier {
 
     try {
       final remoteData = await _apiService.fetchTransactions();
-      _transactions = remoteData;
+      
+      // Preserve local unsynced transactions (from widget/volume gesture)
+      final localUnsynced = _transactions.where((tx) => !tx.isSynced).toList();
+      
+      // Create a map of remote IDs for efficient lookup
+      final remoteIds = remoteData.map((tx) => tx.id).toSet();
+      
+      // Only keep unsynced ones that aren't already in the remote data
+      final missingUnsynced = localUnsynced.where((tx) => !remoteIds.contains(tx.id)).toList();
+      
+      // Merge: Unsynced locally first, then remote data
+      _transactions = [...missingUnsynced, ...remoteData];
+      
       // Sort by date descending
       _transactions.sort((a, b) => b.date.compareTo(a.date));
+      
       await _storageService.saveTransactions(_transactions);
       await _updateWidget();
+      
+      if (kDebugMode && missingUnsynced.isNotEmpty) {
+        print('[TransactionProvider] Preserved ${missingUnsynced.length} unsynced transactions during fetch');
+      }
     } catch (e) {
       _error = e.toString();
-
+      if (kDebugMode) print('[TransactionProvider] Error fetching: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
