@@ -4,11 +4,13 @@ import '../models/transaction.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_service.dart';
+import '../services/firestore_backup_service.dart';
 
 class TransactionProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
   final WidgetService _widgetService = WidgetService();
+  final FirestoreBackupService _firestoreBackup = FirestoreBackupService();
 
   List<TransactionModel> _transactions = [];
   bool _isLoading = false;
@@ -131,9 +133,13 @@ class TransactionProvider with ChangeNotifier {
       _syncStatus = 'Syncing to cloud...';
       notifyListeners();
       
-      // Then sync to API
+      // Then sync to API (Google Sheets - primary)
       _isSyncing = true;
       await _apiService.addTransaction(newTx);
+      
+      // Backup to Firestore (silent, non-blocking)
+      _firestoreBackup.addBackupRecord(newTx);
+      
       _syncStatus = 'Synced ✓';
       await _updateWidget();
       
@@ -171,6 +177,10 @@ class TransactionProvider with ChangeNotifier {
     try {
       await _storageService.saveTransactions(_transactions);
       await _apiService.deleteTransaction(id);
+      
+      // Backup delete to Firestore (silent, non-blocking)
+      _firestoreBackup.deleteBackupRecord(id);
+      
       await _updateWidget();
     } catch (e) {
       _error = 'Failed to sync delete: $e';

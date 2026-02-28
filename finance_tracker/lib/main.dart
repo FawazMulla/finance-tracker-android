@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'providers/transaction_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/widget_service.dart';
@@ -8,6 +9,13 @@ import 'services/widget_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase (silent failure - backup is optional)
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('[Firebase] Initialization failed: $e');
+  }
   
   // Initialize widget service
   final widgetService = WidgetService();

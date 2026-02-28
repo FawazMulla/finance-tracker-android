@@ -11,6 +11,7 @@ import '../services/widget_service.dart';
 
 import 'history_screen.dart';
 import 'stats_screen.dart';
+import 'backup_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -410,6 +411,12 @@ class _HomeScreenState extends State<HomeScreen>
               MaterialPageRoute(
                   builder: (_) => const StatsScreen()),
             );
+          } else if (idx == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const BackupScreen()),
+            );
           }
         },
         destinations: const [
@@ -419,6 +426,8 @@ class _HomeScreenState extends State<HomeScreen>
               icon: Icon(Icons.history_outlined), label: 'History'),
           NavigationDestination(
               icon: Icon(Icons.pie_chart_outline), label: 'Stats'),
+          NavigationDestination(
+              icon: Icon(Icons.cloud_outlined), label: 'Backup'),
         ],
       ),
     );
