@@ -17,6 +17,9 @@ class TransactionProvider with ChangeNotifier {
   bool _isSyncing = false;
   String? _error;
   String? _syncStatus;
+  DateTime? _lastFetchTime;
+  bool _isBusy = false; // Guard against overlapping calls
+  static const _fetchThrottleInterval = Duration(minutes: 5);
 
   List<TransactionModel> get transactions => _transactions;
   bool get isLoading => _isLoading;
@@ -37,42 +40,72 @@ class TransactionProvider with ChangeNotifier {
     );
   }
 
-  Future<void> loadInitialData() async {
+  Future<void> loadInitialData({bool forceRemoteFetch = false}) async {
+    if (_isBusy) return;
+    _isBusy = true;
+
+    // Stage 1: Always load from local cache first (instant response)
     _isLoading = true;
     notifyListeners();
 
     try {
-      // Load cache first for speed
       _transactions = await _storageService.loadTransactions();
       _isLoading = false;
       notifyListeners();
 
-      // Defer sync operations to avoid blocking UI
-      Future.delayed(const Duration(milliseconds: 500), () async {
-        // Check for unsynced transactions (from widget)
-        final unsynced = _transactions.where((tx) => !tx.isSynced).toList();
-        if (unsynced.isNotEmpty) {
-          _syncStatus = 'Syncing widget transactions...';
-          notifyListeners();
-          
-          // Sync one at a time to reduce load
-          for (final tx in unsynced) {
-            try {
-              await _apiService.addTransaction(tx);
-            } catch (e) {
-              if (kDebugMode) print('Failed to sync widget tx ${tx.id}: $e');
+      // Check for unsynced transactions (e.g. from volume gesture/widget)
+      final unsynced = _transactions.where((tx) => !tx.isSynced).toList();
+      
+      bool needsRemoteFetch = forceRemoteFetch;
+      
+      // If we have unsynced items, we MUST sync them
+      if (unsynced.isNotEmpty) {
+        _syncStatus = 'Syncing new data...';
+        notifyListeners();
+        
+        for (final tx in unsynced) {
+          try {
+            await _apiService.addTransaction(tx);
+            // Mark as synced in local memory
+            final idx = _transactions.indexOf(tx);
+            if (idx != -1) {
+              _transactions[idx] = TransactionModel(
+                id: tx.id,
+                date: tx.date,
+                amount: tx.amount,
+                note: tx.note,
+                isSynced: true,
+              );
             }
+          } catch (e) {
+             if (kDebugMode) print('Failed to sync widget tx ${tx.id}: $e');
           }
         }
+        
+        // After syncing, we should update local storage once
+        await _storageService.saveTransactions(_transactions);
+        _syncStatus = null;
+        notifyListeners();
+        needsRemoteFetch = true; // Refresh from remote because we just sent new data
+      }
 
-        // Then fetch from API
-        await fetchTransactions();
-      });
+      // Stage 2: Only fetch from remote if throttled or forced
+      final now = DateTime.now();
+      if (!needsRemoteFetch && _lastFetchTime != null) {
+        if (now.difference(_lastFetchTime!) < _fetchThrottleInterval) {
+          if (kDebugMode) print('[TransactionProvider] Skipping remote fetch (throttled)');
+          return;
+        }
+      }
+
+      // If we got here, we are fetching
+      await fetchTransactions();
     } catch (e) {
-      // If API fails, we rely on cache and show error locally
-      if (kDebugMode) print('Error loading initial data: $e');
+      if (kDebugMode) print('Error in loadInitialData: $e');
       _isLoading = false;
       notifyListeners();
+    } finally {
+      _isBusy = false;
     }
   }
 
@@ -99,6 +132,7 @@ class TransactionProvider with ChangeNotifier {
       // Sort by date descending
       _transactions.sort((a, b) => b.date.compareTo(a.date));
       
+      _lastFetchTime = DateTime.now();
       await _storageService.saveTransactions(_transactions);
       await _updateWidget();
       
